@@ -1,0 +1,182 @@
+﻿@*引入QR code JS*@
+
+@* 上排導覽列 *@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">QR&nbsp;Code存入MySQL作業&nbsp;姓名:蕭維均 &nbsp;學號:1100336</a>
+    </div>
+</nav>
+
+
+<br>
+<br>
+<br>
+
+@* 輸入框 *@
+<div class="container">
+    <div class="row justify-content-md-center">
+        <div class="col-6">
+            <div class="card text-white bg-dark">
+                <div class="card-body">
+                    @* QR code *@
+                    <div id="qr-reader" style=" margin: auto auto;position:relative;"></div>
+                    <div id="qr-reader-results"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<br>
+<br>
+<br>
+
+@* 貨物清單表格 *@
+
+<div class="container">
+    <div class="row justify-content-md-center">
+        <div class="col-10">
+            <div class="card border-dark bg-white">
+                <div class="card-body">
+                    <div class="row justify-content-md-center">
+                        <div class="col-11">
+                            <div class="text-center"><h3>已經儲存的QR &nbsp;Code</h3></div>
+
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">編號</th>
+                                        <th scope="col">QR &nbsp;Code內容</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsTable">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@Scripts.Render("~/Scripts/html5-qrcode.min.js")
+
+<script>
+    /**
+     * 傳送Ajax QRCode
+     * string QRCodeString
+     * function afterSuccessCallBack
+     */
+    function sendQRCodeToApi(QRCodeString, afterSuccessCallBack) {
+        $.ajax({
+            method: "POST",
+            url: "/API/storeQRCode",
+            data: {
+                data: QRCodeString
+            },
+            statusCode: {
+                500: function () {
+                    Swal.fire({
+                        title: '伺服器端錯誤!',
+                        text: '請檢察是否所有的數值都有輸入',
+                        icon: 'error',
+                        confirmButtonText: '了解'
+                    })
+                },
+            }
+        })
+            .done(function (msg) {
+                Swal.fire({
+                    title: '傳送成功!',
+                    text: '新增材料成功，伺服器進行響應' + msg.Status,
+                    icon: 'success',
+                    timer: 1000,
+                    showCancelButton: false,
+                    showConfirmButton: false
+                })
+                console.log(msg)
+                afterSuccessCallBack()
+            });
+    }
+
+</script>
+
+<script>
+    /**
+     * 接收Ajax QRCode 清單
+     */
+    function getQRCodeToApi() {
+        $.ajax({
+            method: "GET",
+            url: "/API/getQRCode",
+            data: {
+                data: null
+            },
+            statusCode: {
+                500: function () {
+                    Swal.fire({
+                        title: '伺服器端錯誤!',
+                        text: '請檢察是否所有的數值都有輸入',
+                        icon: 'error',
+                        confirmButtonText: '了解'
+                    })
+                },
+            }
+        })
+            .done(function (msg) {
+                document.getElementById("itemsTable").innerHTML = msg;
+            });
+    }
+
+</script>
+
+<script>
+    /**
+     *建立QR code窗口
+     * */
+    function QRCodeRender() {
+        //掃描結果計數器與一開始的掃描結果設置初始值為0
+        var lastResult;
+        var countResults = 0;
+
+        var html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+
+        var onScanSuccess = function (decodedText, decodedResult) {
+            //如果掃描到的結果字串，跟上次掃描到的不一樣，則將內容加入HTML中。
+            //這個避免了同一個QR code瞬間掃描了好幾次。
+            if (decodedText !== lastResult) {
+                //掃描結果文字計數器。
+                ++countResults;
+                //儲存掃描結果到變數
+                lastResult = decodedText;
+                sendQRCodeToApi(decodedText, getQRCodeToApi)
+            }
+        }
+        //畫出掃描視窗，並且將成功與失敗的結果放入行動中。
+        html5QrcodeScanner.render(onScanSuccess, () => { });
+    }
+</script>
+
+<script>
+    //當DOM載入完成後開始執行JS函數
+    document.addEventListener("DOMContentLoaded", function () {
+        let QRCodeRenderObj = new QRCodeRender()
+    });
+</script>
+
+<style>
+    body {
+        min-width: 1000px;
+    }
+
+    #qr-reader__scan_region {
+        border-width:0 !important;
+    }
+
+    #qr-reader__scan_region video {
+        width: 100% !important;
+    }
+</style>
