@@ -21,9 +21,47 @@ namespace QRCodeMySQL.Models
             conn.ConnectionString = connString;
             if (conn.State != ConnectionState.Open)
             {
+                testDatabase();
                 conn.Open();
             }
 
+        }
+
+        //測試資料庫
+        public void testDatabase()
+        {
+            //如果找不到目標資料表，則重建資料表
+            try
+            {
+                getQRCodeData();
+            }
+            catch (Exception ex)
+            {
+                conn.Close();
+                buildDatabase();
+            }
+        }
+
+        //重建資料庫
+        public void buildDatabase()
+        {
+            connString = "server=127.0.0.1;port=3306;user id=root;password=root;charset=utf8;";
+            conn = new MySqlConnection();
+            conn.ConnectionString = connString;
+            conn.Open();
+            string sql = @"CREATE DATABASE IF NOT EXISTS `mvcdb`;USE `mvcdb`;";
+            MySqlCommand cmd = new MySqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
+            sql = @"
+                CREATE TABLE IF NOT EXISTS `qr-code` (
+                  `id` int(11) NOT NULL AUTO_INCREMENT,
+                  `qr-code-string` varchar(50) DEFAULT NULL,
+                  PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ";
+            cmd = new MySqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
+            conn.Close();
         }
 
         //插入QR coede
@@ -36,7 +74,7 @@ namespace QRCodeMySQL.Models
 
             cmd.ExecuteNonQuery();
             conn.Close();
- 
+
         }
 
         //取得QR coede
@@ -56,10 +94,12 @@ namespace QRCodeMySQL.Models
                 {
                     QRCodeModel qrCodeModel = new QRCodeModel();
                     qrCodeModel.id = sdr["id"].ToString();
-                    qrCodeModel.qrCodeString= sdr["qr-code-string"].ToString();
+                    qrCodeModel.qrCodeString = sdr["qr-code-string"].ToString();
                     qRCodeModelList.Add(qrCodeModel);
-                }                
+                }
             }
+
+            conn.Close();
 
             return qRCodeModelList;
         }
